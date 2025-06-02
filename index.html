@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travel Animator</title>
+    <!-- Materialize CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <style>
+        /* Custom styles if needed */
+        #map-container {
+            width: 100%;
+            height: 400px;
+            background-color: #f0f0f0; /* Will be covered by map, but good fallback */
+            text-align: center;
+            line-height: 400px; /* Vertically center text if map fails to load */
+            margin-top: 20px;
+        }
+    </style>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAz1RYyCsh-OjlxDo5Dc_W9wmEzZFpqNRo&callback=initMap"></script>
+</head>
+<body>
+    <header>
+        <h1 class="center-align">Travel Animator</h1>
+    </header>
+    <main class="container">
+        <form id="journey-form">
+            <div class="input-field">
+                <input type="text" id="origin-input" name="origin" class="validate" required>
+                <label for="origin-input">Origin:</label>
+            </div>
+            <div class="input-field">
+                <input type="text" id="destination-input" name="destination" class="validate" required>
+                <label for="destination-input">Destination:</label>
+            </div>
+            <div>
+                <p>Mode of Transport:</p>
+                <p>
+                  <label>
+                    <input type="radio" id="transport-car" name="transport-type" value="car" class="with-gap" checked />
+                    <span>Car</span>
+                  </label>
+                </p>
+                <p>
+                  <label>
+                    <input type="radio" id="transport-plane" name="transport-type" value="plane" class="with-gap" />
+                    <span>Plane</span>
+                  </label>
+                </p>
+            </div>
+            <button type="button" id="generate-btn" class="btn waves-effect waves-light">Generate Journey</button>
+        </form>
+        <div id="map-container">
+            <!-- Map will be displayed here by initMap -->
+        </div>
+    </main>
+    <!-- Materialize JavaScript (needed for certain components, good to include) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
