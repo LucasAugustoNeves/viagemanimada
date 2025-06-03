@@ -6,6 +6,7 @@
     <title>Travel Animator</title>
     <!-- Materialize CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         /* Custom styles if needed */
         #map-container {
@@ -33,6 +34,17 @@
                 <input type="text" id="destination-input" name="destination" class="validate" required>
                 <label for="destination-input">Destination:</label>
             </div>
+
+            <div id="waypoints-section">
+                <h4>Stopovers / Waypoints:</h4>
+                <div id="waypoints-container">
+                    <!-- Waypoint input fields will be added here by JavaScript -->
+                </div>
+                <button type="button" id="add-stop-btn" class="btn-small waves-effect waves-light teal" style="margin-top: 10px;">
+                    <i class="material-icons left">add_location</i>Add Stop
+                </button>
+            </div>
+
             <div>
                 <p>Mode of Transport:</p>
                 <p>

@@ -5,6 +5,29 @@ let directionsRenderer;
 let animatedMarker = null;
 let animationTimeout = null; // To control and cancel existing timeouts
 
+// Helper function to create emoji-based map icons
+function createEmojiIcon(emoji, size) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // Set font size slightly smaller than canvas to fit, adjust as needed
+    ctx.font = (size * 0.8) + 'px sans-serif'; 
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Fill emoji at the center of the canvas
+    // The y-position might need slight adjustment depending on the emoji and font
+    ctx.fillText(emoji, size / 2, size / 2 + (size * 0.05) ); // Small nudge down for better centering
+
+    return {
+        url: canvas.toDataURL(),
+        scaledSize: new google.maps.Size(size, size),
+        anchor: new google.maps.Point(size / 2, size / 2) // Anchor to the center of the emoji
+    };
+}
+
 function initMap() {
   try {
     const mapContainer = document.getElementById('map-container');
@@ -13,7 +36,7 @@ function initMap() {
       alert("Error: Map display area not found on the page.");
       return;
     }
-    mapContainer.innerHTML = ''; // Clear placeholder text or any previous map instances
+    mapContainer.innerHTML = ''; 
 
     map = new google.maps.Map(mapContainer, {
       center: { lat: 0, lng: 0 },
@@ -24,7 +47,7 @@ function initMap() {
     geocoder = new google.maps.Geocoder();
     directionsService = new google.maps.DirectionsService();
     directionsRenderer = new google.maps.DirectionsRenderer();
-    directionsRenderer.setMap(map); // Link renderer to the map
+    directionsRenderer.setMap(map); 
   } catch (e) {
     console.error("Error during Google Maps initialization:", e);
     alert("Failed to initialize Google Maps. Please check your API key and internet connection, then refresh the page.");
@@ -42,7 +65,6 @@ function geocodeAddress(addressString) {
       if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
         resolve(results[0].geometry.location);
       } else {
-        // Provide a more specific error message based on status
         let userMessage = `Geocoding failed for "${addressString}".`;
         if (status === google.maps.GeocoderStatus.ZERO_RESULTS) {
           userMessage = `Could not find location: "${addressString}". Please check the address and try again.`;
@@ -59,7 +81,6 @@ function geocodeAddress(addressString) {
 function animateMarker(route) {
   if (typeof google === 'undefined' || !google.maps || !map) {
     console.error("Animation cannot proceed: Google Maps API or map object not available.");
-    // No alert here as this is an internal function; error logged.
     return;
   }
 
@@ -78,28 +99,20 @@ function animateMarker(route) {
 
   const selectedTransportRadio = document.querySelector('input[name="transport-type"]:checked');
   const selectedTransportValue = selectedTransportRadio ? selectedTransportRadio.value : 'car';
-
-  let iconSymbolPath = google.maps.SymbolPath.FORWARD_CLOSED_ARROW;
-  let iconFillColor = '#FF0000'; 
-  let iconStrokeColor = '#FF0000';
+  
+  let finalMarkerIcon;
+  const emojiIconSize = 32; // Define a consistent size for emoji icons
 
   if (selectedTransportValue === 'plane') {
-    iconSymbolPath = 'M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z';
-    iconFillColor = '#0000FF'; 
-    iconStrokeColor = '#0000FF';
+      finalMarkerIcon = createEmojiIcon('🛩️', emojiIconSize); // U+FE0F variation selector for explicit emoji
+  } else { // Default to car
+      finalMarkerIcon = createEmojiIcon('🚙', emojiIconSize);
   }
 
   animatedMarker = new google.maps.Marker({
     map: map,
-    icon: {
-      path: iconSymbolPath,
-      scale: selectedTransportValue === 'plane' ? 0.7 : 5,
-      strokeColor: iconStrokeColor,
-      strokeWeight: selectedTransportValue === 'plane' ? 1 : 2,
-      fillColor: iconFillColor,
-      fillOpacity: 1,
-      anchor: selectedTransportValue === 'plane' ? new google.maps.Point(10, 10) : new google.maps.Point(0, 2.5)
-    }
+    icon: finalMarkerIcon,
+    // position will be set by animation loop
   });
 
   let step = 0;
@@ -119,7 +132,7 @@ function animateMarker(route) {
 }
 
 
-function calculateAndDisplayRoute(originLatLng, destinationLatLng, travelModeString) {
+function calculateAndDisplayRoute(originLatLng, destinationLatLng, waypoints, travelModeString) {
   if (typeof google === 'undefined' || !google.maps || !directionsService || !directionsRenderer || !map) {
     console.error("Directions service not available (Google Maps API, services, or map not loaded).");
     alert("Map services required for routing are not ready. Please try refreshing the page.");
@@ -129,13 +142,15 @@ function calculateAndDisplayRoute(originLatLng, destinationLatLng, travelModeStr
   const request = {
     origin: originLatLng,
     destination: destinationLatLng,
+    waypoints: waypoints, 
+    optimizeWaypoints: true, 
     travelMode: google.maps.TravelMode[travelModeString.toUpperCase()] || google.maps.TravelMode.DRIVING
   };
 
   directionsService.route(request, (result, status) => {
     if (status === google.maps.DirectionsStatus.OK) {
       directionsRenderer.setDirections(result);
-      console.log('Route displayed on map.');
+      console.log('Route displayed on map with waypoints.');
       if (result.routes && result.routes.length > 0) {
         animateMarker(result.routes[0]);
       } else {
@@ -145,9 +160,9 @@ function calculateAndDisplayRoute(originLatLng, destinationLatLng, travelModeStr
     } else {
       let userMessage = "Could not calculate directions.";
       if (status === google.maps.DirectionsStatus.NOT_FOUND) {
-        userMessage = "Could not find a route for one or both of the locations. Please check the locations.";
+        userMessage = "Could not find a route for one or more of the locations (origin, destination, or waypoints). Please check the locations.";
       } else if (status === google.maps.DirectionsStatus.ZERO_RESULTS) {
-        userMessage = "No route could be found between the origin and destination.";
+        userMessage = "No route could be found between the origin, destination, and waypoints.";
       } else {
         userMessage += ` Error: ${status}`;
       }
@@ -162,17 +177,63 @@ document.addEventListener('DOMContentLoaded', function() {
     const originInput = document.getElementById('origin-input');
     const destinationInput = document.getElementById('destination-input');
     const transportTypeCar = document.getElementById('transport-car');
+    
+    const addStopBtn = document.getElementById('add-stop-btn');
+    const waypointsContainer = document.getElementById('waypoints-container');
+    let waypointCounter = 0;
+
+    if (addStopBtn && waypointsContainer) {
+        addStopBtn.addEventListener('click', function() {
+            waypointCounter++;
+            const waypointDiv = document.createElement('div');
+            waypointDiv.classList.add('waypoint-entry'); 
+            waypointDiv.style.display = 'flex';
+            waypointDiv.style.alignItems = 'center';
+            waypointDiv.style.marginBottom = '10px'; 
+
+            const newInput = document.createElement('input');
+            newInput.type = 'text';
+            newInput.classList.add('waypoint-input', 'validate'); 
+            newInput.placeholder = `Stopover ${waypointCounter} Location`;
+            newInput.style.flexGrow = '1'; 
+            newInput.style.marginRight = '10px'; 
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button'; 
+            removeBtn.classList.add('btn-floating', 'btn-small', 'red', 'waves-effect', 'waves-light');
+            
+            const removeIcon = document.createElement('i');
+            removeIcon.classList.add('material-icons');
+            removeIcon.textContent = 'remove';
+            removeBtn.appendChild(removeIcon);
+
+            removeBtn.addEventListener('click', function() {
+                waypointDiv.remove();
+            });
+            
+            const inputWrapper = document.createElement('div');
+            inputWrapper.classList.add('input-field'); 
+            inputWrapper.style.flexGrow = '1';
+            inputWrapper.style.marginRight = '10px';
+            inputWrapper.appendChild(newInput);
+
+            waypointDiv.appendChild(inputWrapper);
+            waypointDiv.appendChild(removeBtn);
+            waypointsContainer.appendChild(waypointDiv);
+        });
+    } else {
+        if (!addStopBtn) console.error("Add Stop button ('add-stop-btn') not found!");
+        if (!waypointsContainer) console.error("Waypoints container ('waypoints-container') not found!");
+    }
 
     if (generateBtn) {
         generateBtn.addEventListener('click', async function() {
-            // 0. Ensure services are minimally available before trying to clear things
             if (typeof google === 'undefined' || !google.maps) {
                 alert("Google Maps API is not loaded. Please check your internet connection or API key setup and refresh.");
                 console.error("Google Maps API not available in click listener.");
                 return;
             }
 
-            // 1. Clear previous route and animation
             if (directionsRenderer) {
                 directionsRenderer.setDirections({routes: []}); 
             }
@@ -212,14 +273,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Check for initialized services again before use, in case initMap failed partially
             if (!geocoder || !directionsService || !directionsRenderer || !map) {
                 alert("Map services are not fully initialized. Please wait or try refreshing the page.");
-                console.error("Core map services (geocoder, directionsService, directionsRenderer, or map) not available in click listener.");
+                console.error("Core map services not available in click listener.");
                 return;
             }
 
-            console.log('Attempting to geocode, find route, and animate...');
+            const waypointInputs = document.querySelectorAll('.waypoint-input');
+            const waypoints = [];
+            for (let input of waypointInputs) {
+                if (input.value.trim() !== '') { 
+                    waypoints.push({
+                        location: input.value,
+                        stopover: true 
+                    });
+                }
+            }
+
+            console.log('Attempting to geocode, find route (with waypoints), and animate...');
             try {
                 const originLatLng = await geocodeAddress(origin);
                 console.log('Origin Geocoded:', originLatLng.toString());
@@ -227,14 +298,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const destinationLatLng = await geocodeAddress(destination);
                 console.log('Destination Geocoded:', destinationLatLng.toString());
 
-                calculateAndDisplayRoute(originLatLng, destinationLatLng, transportMode);
+                calculateAndDisplayRoute(originLatLng, destinationLatLng, waypoints, transportMode);
                 
-            } catch (error) { // This will catch errors from geocodeAddress (which now include user-friendly messages)
+            } catch (error) { 
                 console.error("Error during geocoding process:", error);
-                alert(error); // Display the user-friendly error message from geocodeAddress
+                alert(error); 
             }
         });
     } else {
-        console.error("Generate button not found!");
+        console.error("Generate button ('generate-btn') not found!");
     }
 });
